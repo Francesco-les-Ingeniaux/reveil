@@ -69,61 +69,69 @@ void loop() {
  
  ul_Temps=millis(); //On récupère le temps depuis le lancement de l'arduino
 
+//TEST DES BOUTONS
+
  for (int i=0 ; i<4 ; ++i) //On teste si les boutons sont appuyés
  {
-   if (digitalRead(MesBoutons[i].pin)==LOW&&MesBoutons[i].actif==0){
-    MesBoutons[i].actif=1;
-    if (i==0)
-      actionSettings();
-    if (i==1)
-      actionSwitch();
-    if (i==2)
-      actionMoins();
-    if (i==3)
-      actionPlus();
-   }
-   else if (digitalRead(MesBoutons[i].pin)==HIGH&&MesBoutons[i].actif==1)
+   if (digitalRead(MesBoutons[i].pin)==LOW&&MesBoutons[i].actif==0) //Si le courant reçu est à l'état bas (0) et que le bouton n'est pas appuyé
    {
-    MesBoutons[i].actif=0;
+    MesBoutons[i].actif=1; //Si le bouton est appuyé on le passe à 1
+    if (i==0)
+      actionSettings(); //On effection les actions pour le bouton settings
+    if (i==1)
+      actionSwitch(); //On effection les actions pour le bouton switch
+    if (i==2)
+      actionMoins(); //On effection les actions pour le bouton moins
+    if (i==3)
+      actionPlus(); //On effection les actions pour le bouton Plus
+   }
+   else if (digitalRead(MesBoutons[i].pin)==HIGH&&MesBoutons[i].actif==1) //Sinon, si le bouton a été appuyé mais qu'il ne l'est plus
+   {
+    MesBoutons[i].actif=0; //On le fait repasser à 0
    }
  }
+
+//TEST DU TEMPS
 
  if (secondes >= 60) //Si 60 secondes se sont écoulées, on incrémente les minutes
     {   
       minutes+=1;
-      secondes=0;
+      secondes=0; //On réinitialise les secondes également
     }
  if (minutes >= 60) //Si 60 minutes se sont écoulées, on incrémente les heures
     {
       heures+=1;
-      minutes=0;
+      minutes=0; //On réinitialise les minutes également
     }
  if (heures >=24) //Si 24 heures se sont écoulées, on revient à 0
        heures=0;
- if (secondes < 0) //Si 60 secondes se sont écoulées, on incrémente les minutes
+ if (secondes < 0) //Si on revient en arrière sous les 0 secondes, on remonte à 59
       secondes=59;
- if (minutes < 0) //Si 60 minutes se sont écoulées, on incrémente les heures
+ if (minutes < 0) //Si on revient en arrière sous les 0 minutes, on remonte à 59
       minutes=59;
- if (heures < 0) //Si 24 heures se sont écoulées, on revient à 0
+ if (heures < 0) //Si on revient en arrière sous les 0 heures, on remonte à 23
       heures=23;
+
+      
  if (ul_Temps - ul_Tempsnouveau > 1000) //Si le temps entre les deux mesures de temps est supérieur à 1000 millisecondes
  {
-    ul_Tempsnouveau=ul_Temps;
-    secondes+=1;
+    ul_Tempsnouveau=ul_Temps; //la nouvelle mesure de temps prend la valeur de la première
+    secondes+=1; //On incrémente les secondes
  }
- if (ul_Temps < ul_Tempsnouveau)
+ if (ul_Temps < ul_Tempsnouveau) //Si jamais il y a eu une remise à zéro (après 50 jours), on réinitialise le temps 
  {
   ul_Tempsnouveau=0;
  }
 
 
- 
+ //TEST DES ETATS DU REVEIL
+ //On affiche le mode voulu sur l'écran LCD
  if (etatSettings==0)
-    affichageEtat0(); //On affiche le mode voulu sur l'écran LCD
+    affichageEtat0(); //Mode temps courant
  if (etatSettings==1)
-    affichageEtat1();
+    affichageEtat1(); //Mode settings du temps courant
  if (etatSettings>=2)
-    affichageEtatN();
+    affichageEtatN(); //Mode réveils
    
 }
 

@@ -1,58 +1,68 @@
+//Bibliothèques nécessaires
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h> //Mise en place des librairies
+#include <LiquidCrystal_I2C.h> //Mise en place des librairies pour le LCD en I2C
 
+//NbR correspond au nombre de réveils
 #define NbR 2
+
+//N correspond au nombre d'écrans différents
 #define N NbR+1
 
-LiquidCrystal_I2C lcd(0x3F, 16, 2); //Initialisation de l'i2c avec l'écran
-  
-unsigned long ul_Temps = 0UL;
-unsigned long ul_Tempsnouveau = 0UL;
-unsigned long ul_Blink= 0UL;
-bool state = 0;
-int secondes=0;
-int minutes=0;
-int heures=0;
-int etatSettings = 0;
-int etatSwitch = 0;
+LiquidCrystal_I2C lcd(0x3F, 16, 2); //Initialisation de la communication I2C avec l'écran
 
-int pinRelais = 4;
+//Déclaration des variables globales
 
+unsigned long ul_Temps = 0UL; //Pour compter le temps depuis le début du programme
+unsigned long ul_Tempsnouveau = 0UL; //Pour compter le différentiel d'une seconde
 
+unsigned long ul_Blink= 0UL; //Pour compter le différentiel entre les clignotements lorsque l'on passe en mode settings
+bool state = 0; //Pour savoir si on affiche ou pas lors du clignotement
+
+int secondes=0; //Compteur des secondes de l'heure courante
+int minutes=0; //Compteur des minutes de l'heure courante
+int heures=0; //Compteur des heures de l'heure courante
+
+int etatSettings = 0; //Pour savoir dans quel écran on se trouve (Heure courante, Mise à l'heure, Mise en route des alarmes)
+int etatSwitch = 0; //Pour savoir combien de fois on a appuyé sur switch donc sur quel paramètres (heures, minutes, secondes ou ON/OFF)
+
+int pinRelais = 4; //Pin pour lequel le relais est mis en place
+
+//Déclaration des structures
 typedef struct bouton{ 
-  int pin;
-  bool actif=0;
+  int pin; //Pour savoir à quel pin on branche le bouton
+  bool actif=0; //Pour savoir si le bouton est appuyé ou non
 };
-bouton MesBoutons[4];
+bouton MesBoutons[4]; //Tableau de boutons (4 - Settings, Switch, -, +)
 
 typedef struct reveil{
-  int heures=0;
-  int minutes=0;
-  int set=0;
-  int actif=0;
+  int heures=0; //Compteur des heures du réveil
+  int minutes=0; //Compteur des minutes du réveil
+  bool set=0; //Pour savoir si le réveil est mis en place ou pas
+  bool actif=0; //Pour savoir si le réveil est activé ou pas (sonne)
 };
-reveil MesReveils[NbR];
+reveil MesReveils[NbR]; //Tableau de réveils
 
 void setup() {
-  
+
+  //Déclaration des pins pour les boutons
   MesBoutons[0].pin = 6;
   MesBoutons[1].pin = 7;
   MesBoutons[2].pin = 8;
   MesBoutons[3].pin = 9;
-  //Pour le LCD
   
+  //Initialisation du LCD
   lcd.init(); //Initialisation du lcd
   lcd.backlight(); //Démarrage du rétroéclairage
   
-
+  //On active le pin du relais en mode output (sortie)
   pinMode(pinRelais, OUTPUT);
 
+  
   for (int i=0 ; i<4 ; ++i)
   {
-    pinMode( MesBoutons[i].pin, INPUT);
-    digitalWrite( MesBoutons[i].pin, HIGH);
+    pinMode( MesBoutons[i].pin, INPUT); //On active les pin des boutons en input (entrée)
+    digitalWrite( MesBoutons[i].pin, HIGH); //On set les pin des boutons en état haut
   }
-  Serial.begin(9600);
 }
 
 void loop() {

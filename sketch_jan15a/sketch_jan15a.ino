@@ -131,50 +131,49 @@ void loop() {
  if (etatSettings==1)
     affichageEtat1(); //Mode settings du temps courant
  if (etatSettings>=2)
-    affichageEtatN(); //Mode réveils
+    affichageEtatN(); //Modes des réveils
    
 }
 
 void affichageEtat0() //Sous programme d'affichage
 {
-      lcd.setCursor(4,0);
-      if (heures<10)
-      {
+      lcd.setCursor(4,0); //On place le curseur là où on veut écrire tel que (emplacement, ligne)
+      if (heures<10) //Pour pouvoir mettre un 0 avant les dizaines 
         lcd.print("0");
-      }
-      lcd.print(heures);
+      lcd.print(heures); //On affiche les heures
+      
       lcd.print(":");
-      if (minutes<10)
-      {
+      
+      if (minutes<10)//Pour pouvoir mettre un 0 avant les dizaines 
         lcd.print("0");
-      }
-      lcd.print(minutes);
+      lcd.print(minutes); //On affiche les minutes
+      
       lcd.print(":");
-      if (secondes<10)
-      {
+      
+      if (secondes<10)//Pour pouvoir mettre un 0 avant les dizaines 
         lcd.print("0");
-      }
-      lcd.print(secondes);
-      lcd.setCursor(2,1);
+      lcd.print(secondes); //On affiche les secondes
+      
+      lcd.setCursor(2,1); //On place le curseur sur la seconde ligne 
       lcd.print("Current Time");
      
 }
 
-void affichageEtat1()
+void affichageEtat1() //Le principe va être le même pour les deux sous programmes suivant : On fait clignoter le paramètre pointé par SWITCH soit l'heure, les minutes, les secondes ou on/off et si on appuie sur switch, et bien on change
 {         
       lcd.setCursor(4,0);
-      blinkState();
-        if (state==1 && etatSwitch==0)
+      blinkState(); //Sous programme pour faire passer un booléen de 0 à 1 pour savoir si 750 millisecondes se sont écoulées
+        if (state==1 && etatSwitch==0) //Si jamais c'est le cas et que l'on pointe sur les heures
         {
           if (heures<10)
           {
             lcd.print("0");
           }
-          lcd.print(heures);
+          lcd.print(heures); //On affiche les heures
         }
-        else if (etatSwitch==0)
+        else if (etatSwitch==0) //Sinon on vide la case, ce qui à pour effet de clignoter
           lcd.print("  ");
-        else if (etatSwitch)
+        else if (etatSwitch) //Si jamais on ne pointe plus les heures avec Switch, alors on affiche les heures normalement.
           {
             if (heures<10)
             {
@@ -185,7 +184,7 @@ void affichageEtat1()
        
       lcd.print(":");
       
-      if (state==1 && etatSwitch==1)
+      if (state==1 && etatSwitch==1) //Le principe est le même que pour les heures
         {
           if (minutes<10)
           {
@@ -205,7 +204,7 @@ void affichageEtat1()
           }
       
       lcd.print(":");
-      if (state==1 && etatSwitch==2)
+      if (state==1 && etatSwitch==2) //Le principe est le même que pour les heures
         {
           if (secondes<10)
           {
@@ -227,14 +226,14 @@ void affichageEtat1()
        lcd.print("Setting Time");
 }
 
-void affichageEtatN()
+void affichageEtatN() //Même configuration qu'en haut sauf que cette fois on agit sur le tableau de structures "MesReveils"
 {
-     int i=etatSettings;
+        int i=etatSettings; //Pas nécessaire, juste pour la lisibilité
         lcd.setCursor(4,0);
         blinkState();
         if (state==1 && etatSwitch==0)
          {
-            if (MesReveils[i-NbR].heures<10)
+            if (MesReveils[i-NbR].heures<10) //Si i vaut 2, et que NbR vaut 2, on agit sur la case 0 du tableau donc le premier réveil, et ainsi de suite
             {
               lcd.print("0");
             }
@@ -300,52 +299,52 @@ void affichageEtatN()
 
 void actionSettings()
 {
-  if (etatSettings >= 0 && etatSettings < N)
-    etatSettings++;
+  if (etatSettings >= 0 && etatSettings < N) //Si l'état dans lequel on se trouve est compris entre 0 et le nombre d'états maximum possibles
+    etatSettings++; //On monte les états
   else 
-    etatSettings=0;
-  etatSwitch=0;
-  lcd.clear();
+    etatSettings=0; //Sinon on revient à 0
+  etatSwitch=0; //On replace aussi etatSwitch à 0
+  lcd.clear(); //On efface l'écran pour éviter d'avoir des problèmes de restes sur l'écran
 }
 
 void actionSwitch()
 {
-  if (etatSettings >= 1)
+  if (etatSettings >= 1) //Si on est sur un autre état que celui d'affichage de l'heure
   {
-    if (etatSwitch >= 0 && etatSwitch < 2)
-      etatSwitch++;
+    if (etatSwitch >= 0 && etatSwitch < 2) //Si l'état dans lequel on se trouve est compris entre 0 et le nombre d'états maximum possibles (ici 2 pour heures/minutes/secondes ou ON OFF)
+      etatSwitch++; //On augmente
     else 
-      etatSwitch=0;
+      etatSwitch=0; //Sinon on revient à 0 (aux heures, donc)
   }
 }
 
-void actionPlus()
+void actionPlus() //le bouton plus à des fonctions différentes selon l'état dans lequel on est
 {
-  if (etatSettings == 1)
+  if (etatSettings == 1)  //Si on est sur les paramètres de l'horloge
   {
-    if (etatSwitch==0)
+    if (etatSwitch==0) //pas d'appui sur switch et on fait monter les heures en appuyant sur plus
       heures+=1;
-    if (etatSwitch==1)
+    if (etatSwitch==1) //1 appui sur switch et on fait monter les minutes en appuyant sur plus
       minutes+=1;
-    if (etatSwitch==2)
+    if (etatSwitch==2) //2 appuis sur switch et on fait monter les secondes en appuyant sur plus
       secondes+=1;
   }
-  if (etatSettings >= 2)
+  if (etatSettings >= 2) //Si on est sur les paramètres des réveils 
   { 
     int i=etatSettings;
-    if (etatSwitch==0)
-      MesReveils[i-NbR].heures+=1;
-    if (etatSwitch==1)
+    if (etatSwitch==0) //pas d'appui sur switch et on fait monter les heures en appuyant sur plus
+      MesReveils[i-NbR].heures+=1; 
+    if (etatSwitch==1) //1 appui sur switch et on fait monter les minutes en appuyant sur plus
       MesReveils[i-NbR].minutes+=1;
-    if (etatSwitch==2)
+    if (etatSwitch==2) //2 appuis sur switch et on active ou on éteint l'activation de l'alarme
     {
-      MesReveils[i-NbR].set=1;
-      lcd.clear();
+      MesReveils[i-NbR].set=1; //Si c'est le cas, le réveil est bien activé, on passe à 1
+      lcd.clear(); //On rend l'affichage propre
     }
   }
 }
 
-void actionMoins()
+void actionMoins() //Même principe que pour plus, mais dans l'autre sens
 {
     if (etatSettings == 1)
     {
@@ -371,7 +370,7 @@ void actionMoins()
     }
 }
 
-void blinkState()
+void blinkState() //Petit sous programme permettant de faire passer un booléen de 0 à 1 pour montrer s'il s'est écoulé 750 millisecondes
 {
   if(ul_Temps - ul_Blink > 750) 
    {

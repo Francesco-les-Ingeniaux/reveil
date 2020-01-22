@@ -15,9 +15,11 @@ LiquidCrystal_I2C lcd(0x3F, 16, 2); //Initialisation de la communication I2C ave
 unsigned long ul_Temps = 0UL; //Pour compter le temps depuis le début du programme
 unsigned long ul_Tempsnouveau = 0UL; //Pour compter le différentiel d'une seconde
 
+unsigned long ul_Sleep=0UL; //Pour compter le différentiel entre la transition en mode veille ou non
 unsigned long ul_Blink= 0UL; //Pour compter le différentiel entre les clignotements lorsque l'on passe en mode settings
 bool state = 0; //Pour savoir si on affiche ou pas lors du clignotement
-
+bool sleep=0;
+bool sonne=0;
 int secondes=0; //Compteur des secondes de l'heure courante
 int minutes=0; //Compteur des minutes de l'heure courante
 int heures=0; //Compteur des heures de l'heure courante
@@ -38,7 +40,6 @@ typedef struct reveil{
   int heures=0; //Compteur des heures du réveil
   int minutes=0; //Compteur des minutes du réveil
   bool set=0; //Pour savoir si le réveil est mis en place ou pas
-  bool actif=0; //Pour savoir si le réveil est activé ou pas (sonne)
 };
 reveil MesReveils[NbR]; //Tableau de réveils
 
@@ -66,26 +67,37 @@ void setup() {
 void loop() {
  
  ul_Temps=millis(); //On récupère le temps depuis le lancement de l'arduino
-
+ sleepState();
+ alarm();
 //TEST DES BOUTONS
 
  for (int i=0 ; i<4 ; ++i) //On teste si les boutons sont appuyés
  {
    if (digitalRead(MesBoutons[i].pin)==LOW&&MesBoutons[i].actif==0) //Si le courant reçu est à l'état bas (0) et que le bouton n'est pas appuyé
-   {
-    MesBoutons[i].actif=1; //Si le bouton est appuyé on le passe à 1
-    if (i==0)
-      actionSettings(); //On effection les actions pour le bouton settings
-    if (i==1)
-      actionSwitch(); //On effection les actions pour le bouton switch
-    if (i==2)
-      actionMoins(); //On effection les actions pour le bouton moins
-    if (i==3)
-      actionPlus(); //On effection les actions pour le bouton Plus
+   {    
+      MesBoutons[i].actif=1; //Si le bouton est appuyé on le passe à 1
+      if (!sleep&&!sonne)
+      {
+        if (i==0)
+          actionSettings(); //On effection les actions pour le bouton settings
+        if (i==1)
+          actionSwitch(); //On effection les actions pour le bouton switch
+        if (i==2)
+          actionMoins(); //On effection les actions pour le bouton moins
+        if (i==3)
+          actionPlus(); //On effection les actions pour le bouton Plus
+      }
+      ul_Sleep=ul_Temps;
+      sleep=0;
+      if (sonne)
+      {
+        sonne=0;
+        digitalWrite(pinRelais, LOW);
+      }
    }
    else if (digitalRead(MesBoutons[i].pin)==HIGH&&MesBoutons[i].actif==1) //Sinon, si le bouton a été appuyé mais qu'il ne l'est plus
    {
-    MesBoutons[i].actif=0; //On le fait repasser à 0
+      MesBoutons[i].actif=0; //On le fait repasser à 0
    }
  }
 
@@ -111,7 +123,7 @@ void loop() {
       heures=23;
 
       
- if (ul_Temps - ul_Tempsnouveau > 1000) //Si le temps entre les deux mesures de temps est supérieur à 1000 millisecondes
+ if (ul_Temps - ul_Tempsnouveau > 980) //Si le temps entre les deux mesures de temps est supérieur à 1000 millisecondes
  {
     ul_Tempsnouveau=ul_Temps; //la nouvelle mesure de temps prend la valeur de la première
     secondes+=1; //On incrémente les secondes
@@ -339,6 +351,10 @@ void actionPlus() //le bouton plus à des fonctions différentes selon l'état d
       MesReveils[i-NbR].set=1; //Si c'est le cas, le réveil est bien activé, on passe à 1
       lcd.clear(); //On rend l'affichage propre
     }
+     if (MesReveils[i-NbR].minutes >= 60) //Si 60 minutes se sont écoulées, on incrémente les heures
+        MesReveils[i-NbR].minutes=0; //On réinitialise les minutes égalemenT
+    if (MesReveils[i-NbR].heures >=24) //Si 24 heures se sont écoulées, on revient à 0
+        MesReveils[i-NbR].heures=0;
   }
 }
 
@@ -365,6 +381,10 @@ void actionMoins() //Même principe que pour plus, mais dans l'autre sens
         MesReveils[i-NbR].set=0;
         lcd.clear();
       }
+       if (MesReveils[i-NbR].minutes < 0) //Si on revient en arrière sous les 0 minutes, on remonte à 59
+            MesReveils[i-NbR].minutes=59;
+       if (MesReveils[i-NbR].heures < 0) //Si on revient en arrière sous les 0 heures, on remonte à 23
+            MesReveils[i-NbR].heures=23;
     }
 }
 
@@ -374,12 +394,30 @@ void blinkState() //Petit sous programme permettant de faire passer un booléen 
    {
         ul_Blink=ul_Temps;
         if (state==0)
-        { 
-          state=1;
-        }
+            state=1;
          else
-        {
-           state=0;  
-        }
+            state=0;
     }
+}
+
+void sleepState() //Pour mettre en place le mode
+{
+  
+  if(ul_Temps - ul_Sleep > 10000) 
+    sleep=1;    
+  if (sleep)
+    lcd.noBacklight();  //On coupe le rétroéclairage
+  else
+    lcd.backlight(); //On rallume l'éclairage
+}
+
+void alarm()
+{
+    for ( int i =0 ; i<NbR ; ++i)
+      if (MesReveils[i].heures==heures&&MesReveils[i].minutes==minutes&&secondes==0&&MesReveils[i].set)  //Si jamais le reveil est à la même heure que celle actuelle
+      {         
+           sonne=1; //On met le booléen à 1
+           digitalWrite(pinRelais, HIGH); //On active la carte MP3
+           lcd.backlight(); //On rallume l'éclairage
+      }
 }

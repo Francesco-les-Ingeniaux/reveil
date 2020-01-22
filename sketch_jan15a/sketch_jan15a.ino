@@ -43,12 +43,12 @@ typedef struct reveil{
 reveil MesReveils[NbR]; //Tableau de réveils
 
 void setup() {
-
+  
   //Déclaration des pins pour les boutons
-  MesBoutons[0].pin = 6;
-  MesBoutons[1].pin = 7;
-  MesBoutons[2].pin = 8;
-  MesBoutons[3].pin = 9;
+  MesBoutons[0].pin = 11;
+  MesBoutons[1].pin = 10;
+  MesBoutons[2].pin = 9;
+  MesBoutons[3].pin = 8;
   
   //Initialisation du LCD
   lcd.init(); //Initialisation du lcd
@@ -56,8 +56,6 @@ void setup() {
   
   //On active le pin du relais en mode output (sortie)
   pinMode(pinRelais, OUTPUT);
-
-  
   for (int i=0 ; i<4 ; ++i)
   {
     pinMode( MesBoutons[i].pin, INPUT); //On active les pin des boutons en input (entrée)

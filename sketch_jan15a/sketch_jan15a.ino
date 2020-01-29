@@ -1,6 +1,7 @@
 //Bibliothèques nécessaires
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h> //Mise en place des librairies pour le LCD en I2C
+#include <DS3231.h> //Mise en place des librairies pour la RTC
 
 //NbR correspond au nombre de réveils
 #define NbR 2
@@ -8,26 +9,26 @@
 //N correspond au nombre d'écrans différents
 #define N NbR+1
 
+
+DS3231 Clock; //Objet de type DS3231 (RTC)
+bool h24, AM; //Deux booléen obligatoires 
+ 
+
 LiquidCrystal_I2C lcd(0x3F, 16, 2); //Initialisation de la communication I2C avec l'écran
 
 //Déclaration des variables globales
 
 unsigned long ul_Temps = 0UL; //Pour compter le temps depuis le début du programme
-unsigned long ul_Tempsnouveau = 0UL; //Pour compter le différentiel d'une seconde
-
 unsigned long ul_Sleep=0UL; //Pour compter le différentiel entre la transition en mode veille ou non
 unsigned long ul_Blink= 0UL; //Pour compter le différentiel entre les clignotements lorsque l'on passe en mode settings
 bool state = 0; //Pour savoir si on affiche ou pas lors du clignotement
-bool sleep=0;
-bool sonne=0;
-int secondes=0; //Compteur des secondes de l'heure courante
-int minutes=0; //Compteur des minutes de l'heure courante
-int heures=0; //Compteur des heures de l'heure courante
+bool sleep=0; //Pour savoir si le réveil est en veille ou pas
+bool sonne=0; //Pour savoir si le réveil sonne ou pas
 
 int etatSettings = 0; //Pour savoir dans quel écran on se trouve (Heure courante, Mise à l'heure, Mise en route des alarmes)
 int etatSwitch = 0; //Pour savoir combien de fois on a appuyé sur switch donc sur quel paramètres (heures, minutes, secondes ou ON/OFF)
 
-int pinRelais = 4; //Pin pour lequel le relais est mis en place
+int pinRelais = 2; //Pin pour lequel le relais est mis en place
 
 //Déclaration des structures
 typedef struct bouton{ 
@@ -65,12 +66,12 @@ void setup() {
 }
 
 void loop() {
- 
+ Clock.setClockMode(false);
  ul_Temps=millis(); //On récupère le temps depuis le lancement de l'arduino
  sleepState();
  alarm();
 //TEST DES BOUTONS
-
+    
  for (int i=0 ; i<4 ; ++i) //On teste si les boutons sont appuyés
  {
    if (digitalRead(MesBoutons[i].pin)==LOW&&MesBoutons[i].actif==0) //Si le courant reçu est à l'état bas (0) et que le bouton n'est pas appuyé
@@ -99,38 +100,7 @@ void loop() {
    {
       MesBoutons[i].actif=0; //On le fait repasser à 0
    }
- }
-
-//TEST DU TEMPS
-
- if (secondes >= 60) //Si 60 secondes se sont écoulées, on incrémente les minutes
-    {   
-      minutes+=1;
-      secondes=0; //On réinitialise les secondes également
-    }
- if (minutes >= 60) //Si 60 minutes se sont écoulées, on incrémente les heures
-    {
-      heures+=1;
-      minutes=0; //On réinitialise les minutes également
-    }
- if (heures >=24) //Si 24 heures se sont écoulées, on revient à 0
-       heures=0;
- if (secondes < 0) //Si on revient en arrière sous les 0 secondes, on remonte à 59
-      secondes=59;
- if (minutes < 0) //Si on revient en arrière sous les 0 minutes, on remonte à 59
-      minutes=59;
- if (heures < 0) //Si on revient en arrière sous les 0 heures, on remonte à 23
-      heures=23;
-
-      
- if (ul_Temps - ul_Tempsnouveau > 980) //Si le temps entre les deux mesures de temps est supérieur à 1000 millisecondes
- {
-    ul_Tempsnouveau=ul_Temps; //la nouvelle mesure de temps prend la valeur de la première
-    secondes+=1; //On incrémente les secondes
- }
- if (ul_Temps < ul_Tempsnouveau) //Si jamais il y a eu une remise à zéro (après 50 jours), on réinitialise le temps 
- {
-  ul_Tempsnouveau=0;
+   delay(5);
  }
 
 
@@ -142,27 +112,26 @@ void loop() {
     affichageEtat1(); //Mode settings du temps courant
  if (etatSettings>=2)
     affichageEtatN(); //Modes des réveils
-   
 }
 
 void affichageEtat0() //Sous programme d'affichage
 {
       lcd.setCursor(4,0); //On place le curseur là où on veut écrire tel que (emplacement, ligne)
-      if (heures<10) //Pour pouvoir mettre un 0 avant les dizaines 
+      if (Clock.getHour(h24, AM)<10) //Pour pouvoir mettre un 0 avant les dizaines 
         lcd.print("0");
-      lcd.print(heures); //On affiche les heures
+      lcd.print(Clock.getHour(h24, AM)); //On affiche les heures avec la fonction get de la classe DS3231
       
       lcd.print(":");
       
-      if (minutes<10)//Pour pouvoir mettre un 0 avant les dizaines 
+      if (Clock.getMinute()<10)//Pour pouvoir mettre un 0 avant les dizaines 
         lcd.print("0");
-      lcd.print(minutes); //On affiche les minutes
+      lcd.print(Clock.getMinute()); //On affiche les minutes
       
       lcd.print(":");
       
-      if (secondes<10)//Pour pouvoir mettre un 0 avant les dizaines 
+      if (Clock.getSecond()<10)//Pour pouvoir mettre un 0 avant les dizaines 
         lcd.print("0");
-      lcd.print(secondes); //On affiche les secondes
+      lcd.print(Clock.getSecond()); //On affiche les secondes
       
       lcd.setCursor(2,1); //On place le curseur sur la seconde ligne 
       lcd.print("Current Time");
@@ -175,62 +144,62 @@ void affichageEtat1() //Le principe va être le même pour les deux sous program
       blinkState(); //Sous programme pour faire passer un booléen de 0 à 1 pour savoir si 750 millisecondes se sont écoulées
         if (state==1 && etatSwitch==0) //Si jamais c'est le cas et que l'on pointe sur les heures
         {
-          if (heures<10)
+          if (Clock.getHour(h24, AM)<10) //Si on est sur des heures sans dizaine on met un zéro (esthétique)
           {
             lcd.print("0");
           }
-          lcd.print(heures); //On affiche les heures
+          lcd.print(Clock.getHour(h24, AM)); //On affiche les heures
         }
         else if (etatSwitch==0) //Sinon on vide la case, ce qui à pour effet de clignoter
           lcd.print("  ");
         else if (etatSwitch) //Si jamais on ne pointe plus les heures avec Switch, alors on affiche les heures normalement.
           {
-            if (heures<10)
+            if (Clock.getHour(h24, AM)<10) //Si on est sur des heures sans dizaine on met un zéro (esthétique)
             {
               lcd.print("0");
             }
-            lcd.print(heures);
+            lcd.print(Clock.getHour(h24, AM));
           }
        
       lcd.print(":");
       
       if (state==1 && etatSwitch==1) //Le principe est le même que pour les heures
         {
-          if (minutes<10)
+          if (Clock.getMinute()<10)
           {
             lcd.print("0");
           }
-          lcd.print(minutes);
+          lcd.print(Clock.getMinute());
         }
         else if (etatSwitch==1)
           lcd.print("  ");
         else if (etatSwitch!=1)
           {
-            if (minutes<10)
+            if (Clock.getMinute()<10)
             {
               lcd.print("0");
             }
-            lcd.print(minutes);
+            lcd.print(Clock.getMinute());
           }
       
       lcd.print(":");
       if (state==1 && etatSwitch==2) //Le principe est le même que pour les heures
         {
-          if (secondes<10)
+          if (Clock.getSecond()<10)
           {
             lcd.print("0");
           }
-          lcd.print(secondes);
+          lcd.print(Clock.getSecond());
         }
         else if (etatSwitch==2)
           lcd.print("  ");
         else if (etatSwitch!=2)
           {
-            if (secondes<10)
+            if (Clock.getSecond()<10)
             {
               lcd.print("0");
             }
-            lcd.print(secondes);
+            lcd.print(Clock.getSecond());
           }
        lcd.setCursor(2,1);
        lcd.print("Setting Time");
@@ -332,12 +301,30 @@ void actionPlus() //le bouton plus à des fonctions différentes selon l'état d
 {
   if (etatSettings == 1)  //Si on est sur les paramètres de l'horloge
   {
-    if (etatSwitch==0) //pas d'appui sur switch et on fait monter les heures en appuyant sur plus
-      heures+=1;
+    if (etatSwitch==0)
+    {
+      //pas d'appui sur switch et on fait monter les heures en appuyant sur plus
+        if (Clock.getHour(h24, AM)+ 1>23) //Si jamais on dépasse 24h on revient à 0
+            Clock.setHour(0);
+        else
+            Clock.setHour(Clock.getHour(h24, AM)+1);
+    }
     if (etatSwitch==1) //1 appui sur switch et on fait monter les minutes en appuyant sur plus
-      minutes+=1;
+    {
+     
+        if (Clock.getMinute()+1>59) //Si jamais on dépasse 59 minutes on revient à 0
+          Clock.setMinute(0);
+        else
+          Clock.setMinute(Clock.getMinute()+1);
+    }
     if (etatSwitch==2) //2 appuis sur switch et on fait monter les secondes en appuyant sur plus
-      secondes+=1;
+    {
+      
+      if (Clock.getSecond()+1>59) //Si jamais on dépasse 59 secondes on revient à 0
+         Clock.setSecond(0);
+      else
+         Clock.setSecond(Clock.getSecond()+1);
+    }
   }
   if (etatSettings >= 2) //Si on est sur les paramètres des réveils 
   { 
@@ -363,11 +350,28 @@ void actionMoins() //Même principe que pour plus, mais dans l'autre sens
     if (etatSettings == 1)
     {
       if (etatSwitch==0)
-        heures-=1;
-      if (etatSwitch==1)
-        minutes-=1;
-      if (etatSwitch==2)
-        secondes-=1;
+      {
+        
+        //pas d'appui sur switch et on fait baisser les heures en appuyant sur plus
+        if (Clock.getHour(h24, AM)- 1<0)
+            Clock.setHour(23);
+        else
+          Clock.setHour(Clock.getHour(h24, AM)-1);
+      }
+      if (etatSwitch==1) //1 appui sur switch et on fait baisser les minutes en appuyant sur plus
+      {
+        if (Clock.getMinute()-1 < 0)
+            Clock.setMinute(59);
+        else
+            Clock.setMinute(Clock.getMinute()-1);
+      }
+      if (etatSwitch==2) //2 appuis sur switch et on fait baisser les secondes en appuyant sur plus
+      {
+        if (Clock.getSecond()-1 < 0)
+            Clock.setSecond(59);
+        else
+            Clock.setSecond(Clock.getSecond()-1);
+      }
     }
     if (etatSettings >= 2)
     { 
@@ -390,7 +394,7 @@ void actionMoins() //Même principe que pour plus, mais dans l'autre sens
 
 void blinkState() //Petit sous programme permettant de faire passer un booléen de 0 à 1 pour montrer s'il s'est écoulé 750 millisecondes
 {
-  if(ul_Temps - ul_Blink > 750) 
+  if(ul_Temps - ul_Blink > 750) //Si le différentiel est de 750 ms
    {
         ul_Blink=ul_Temps;
         if (state==0)
@@ -403,7 +407,7 @@ void blinkState() //Petit sous programme permettant de faire passer un booléen 
 void sleepState() //Pour mettre en place le mode
 {
   
-  if(ul_Temps - ul_Sleep > 10000) 
+  if(ul_Temps - ul_Sleep > 20000) //Si le différentiel est de 20 secondes
     sleep=1;    
   if (sleep)
     lcd.noBacklight();  //On coupe le rétroéclairage
@@ -414,7 +418,7 @@ void sleepState() //Pour mettre en place le mode
 void alarm()
 {
     for ( int i =0 ; i<NbR ; ++i)
-      if (MesReveils[i].heures==heures&&MesReveils[i].minutes==minutes&&secondes==0&&MesReveils[i].set)  //Si jamais le reveil est à la même heure que celle actuelle
+      if (MesReveils[i].heures==Clock.getHour(h24, AM)&&MesReveils[i].minutes==Clock.getMinute()&&Clock.getSecond()==0&&MesReveils[i].set)  //Si jamais le reveil est à la même heure que celle actuelle
       {         
            sonne=1; //On met le booléen à 1
            digitalWrite(pinRelais, HIGH); //On active la carte MP3

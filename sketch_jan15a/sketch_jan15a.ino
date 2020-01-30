@@ -70,8 +70,8 @@ void loop() {
  ul_Temps=millis(); //On récupère le temps depuis le lancement de l'arduino
  sleepState();
  alarm();
-//TEST DES BOUTONS
-    
+
+  //TEST DES BOUTONS  
  for (int i=0 ; i<4 ; ++i) //On teste si les boutons sont appuyés
  {
    if (digitalRead(MesBoutons[i].pin)==LOW&&MesBoutons[i].actif==0) //Si le courant reçu est à l'état bas (0) et que le bouton n'est pas appuyé
@@ -100,10 +100,7 @@ void loop() {
    {
       MesBoutons[i].actif=0; //On le fait repasser à 0
    }
-   delay(5);
  }
-
-
  //TEST DES ETATS DU REVEIL
  //On affiche le mode voulu sur l'écran LCD
  if (etatSettings==0)
@@ -112,30 +109,44 @@ void loop() {
     affichageEtat1(); //Mode settings du temps courant
  if (etatSettings>=2)
     affichageEtatN(); //Modes des réveils
+  delay(5);
+}
+
+bool IsThereAlarm() //Sous programme qui retourn 1 si un réveil est enclenché 0 sinon
+{
+  for (int i=0 ; i < NbR ; ++i)
+    if (MesReveils[i].set)
+      return 1;
+  return 0;
 }
 
 void affichageEtat0() //Sous programme d'affichage
 {
       lcd.setCursor(4,0); //On place le curseur là où on veut écrire tel que (emplacement, ligne)
       if (Clock.getHour(h24, AM)<10) //Pour pouvoir mettre un 0 avant les dizaines 
-        lcd.print("0");
+         lcd.print("0");
       lcd.print(Clock.getHour(h24, AM)); //On affiche les heures avec la fonction get de la classe DS3231
       
       lcd.print(":");
       
       if (Clock.getMinute()<10)//Pour pouvoir mettre un 0 avant les dizaines 
-        lcd.print("0");
+         lcd.print("0");
       lcd.print(Clock.getMinute()); //On affiche les minutes
       
       lcd.print(":");
       
       if (Clock.getSecond()<10)//Pour pouvoir mettre un 0 avant les dizaines 
-        lcd.print("0");
+         lcd.print("0");
       lcd.print(Clock.getSecond()); //On affiche les secondes
       
       lcd.setCursor(2,1); //On place le curseur sur la seconde ligne 
       lcd.print("Current Time");
-     
+
+      if (IsThereAlarm()) //Si un réveil est enclenché
+      { 
+        lcd.setCursor(15,0);
+        lcd.print("."); //On met un point sur l'écran principal
+      }     
 }
 
 void affichageEtat1() //Le principe va être le même pour les deux sous programmes suivant : On fait clignoter le paramètre pointé par SWITCH soit l'heure, les minutes, les secondes ou on/off et si on appuie sur switch, et bien on change

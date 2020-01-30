@@ -45,7 +45,7 @@ typedef struct reveil{
 reveil MesReveils[NbR]; //Tableau de réveils
 
 void setup() {
-  
+   Clock.setClockMode(true); //Formate l'heure en 24h
   //Déclaration des pins pour les boutons
   MesBoutons[0].pin = 11;
   MesBoutons[1].pin = 10;
@@ -66,7 +66,7 @@ void setup() {
 }
 
 void loop() {
- Clock.setClockMode(false);
+
  ul_Temps=millis(); //On récupère le temps depuis le lancement de l'arduino
  sleepState();
  alarm();
@@ -421,9 +421,13 @@ void sleepState() //Pour mettre en place le mode
   if(ul_Temps - ul_Sleep > 20000) //Si le différentiel est de 20 secondes
     sleep=1;    
   if (sleep)
+  {
     lcd.noBacklight();  //On coupe le rétroéclairage
+    lcd.clear();
+  }
   else
     lcd.backlight(); //On rallume l'éclairage
+  
 }
 
 void alarm()

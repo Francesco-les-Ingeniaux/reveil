@@ -35,8 +35,10 @@ typedef struct bouton{
   int pin; //Pour savoir à quel pin on branche le bouton
   bool actif=0; //Pour savoir si le bouton est appuyé ou non
 };
+
 bouton MesBoutons[4]; //Tableau de boutons (4 - Settings, Switch, -, +)
 
+  
 typedef struct reveil{
   int heures=0; //Compteur des heures du réveil
   int minutes=0; //Compteur des minutes du réveil
@@ -46,12 +48,11 @@ reveil MesReveils[NbR]; //Tableau de réveils
 
 void setup() {
    Clock.setClockMode(true); //Formate l'heure en 24h
-  //Déclaration des pins pour les boutons
-  MesBoutons[0].pin = 11;
-  MesBoutons[1].pin = 10;
-  MesBoutons[2].pin = 9;
-  MesBoutons[3].pin = 8;
-  
+   //Déclaration des pins pour les boutons
+   MesBoutons[0].pin = 11;
+   MesBoutons[1].pin = 10;
+   MesBoutons[2].pin = 9;
+   MesBoutons[3].pin = 8;
   //Initialisation du LCD
   lcd.init(); //Initialisation du lcd
   lcd.backlight(); //Démarrage du rétroéclairage
@@ -68,47 +69,10 @@ void setup() {
 void loop() {
 
  ul_Temps=millis(); //On récupère le temps depuis le lancement de l'arduino
- sleepState();
- alarm();
-
-  //TEST DES BOUTONS  
- for (int i=0 ; i<4 ; ++i) //On teste si les boutons sont appuyés
- {
-   if (digitalRead(MesBoutons[i].pin)==LOW&&MesBoutons[i].actif==0) //Si le courant reçu est à l'état bas (0) et que le bouton n'est pas appuyé
-   {    
-      MesBoutons[i].actif=1; //Si le bouton est appuyé on le passe à 1
-      if (!sleep&&!sonne)
-      {
-        if (i==0)
-          actionSettings(); //On effection les actions pour le bouton settings
-        if (i==1)
-          actionSwitch(); //On effection les actions pour le bouton switch
-        if (i==2)
-          actionMoins(); //On effection les actions pour le bouton moins
-        if (i==3)
-          actionPlus(); //On effection les actions pour le bouton Plus
-      }
-      ul_Sleep=ul_Temps;
-      sleep=0;
-      if (sonne)
-      {
-        sonne=0;
-        digitalWrite(pinRelais, LOW);
-      }
-   }
-   else if (digitalRead(MesBoutons[i].pin)==HIGH&&MesBoutons[i].actif==1) //Sinon, si le bouton a été appuyé mais qu'il ne l'est plus
-   {
-      MesBoutons[i].actif=0; //On le fait repasser à 0
-   }
- }
- //TEST DES ETATS DU REVEIL
- //On affiche le mode voulu sur l'écran LCD
- if (etatSettings==0)
-    affichageEtat0(); //Mode temps courant
- if (etatSettings==1)
-    affichageEtat1(); //Mode settings du temps courant
- if (etatSettings>=2)
-    affichageEtatN(); //Modes des réveils
+ sleepState(); //Pour le mode veille
+ alarm(); //Pour le mode alarme
+ testBouton(); //On teste les boutons et on active leur fonction
+ testEtat(); //On teste les états et on afficge l'état dans lequel on se trouve
   delay(5);
 }
 
@@ -147,6 +111,52 @@ void affichageEtat0() //Sous programme d'affichage
         lcd.setCursor(15,0);
         lcd.print("."); //On met un point sur l'écran principal
       }     
+}
+
+void testEtat()
+{
+  
+ //On affiche le mode voulu sur l'écran LCD
+ if (etatSettings==0)
+    affichageEtat0(); //Mode temps courant
+ if (etatSettings==1)
+    affichageEtat1(); //Mode settings du temps courant
+ if (etatSettings>=2)
+    affichageEtatN(); //Modes des réveils
+    
+}
+void testBouton()
+{
+  for (int i=0 ; i<4 ; ++i) //On teste si les boutons sont appuyés
+ {
+   if (digitalRead(MesBoutons[i].pin)==LOW&&MesBoutons[i].actif==0) //Si le courant reçu est à l'état bas (0) et que le bouton n'est pas appuyé
+   {    
+      MesBoutons[i].actif=1; //Si le bouton est appuyé on le passe à 1
+      if (!sleep&&!sonne)
+      {
+        if (i==0)
+          actionSettings(); //On effection les actions pour le bouton settings
+        if (i==1)
+          actionSwitch(); //On effection les actions pour le bouton switch
+        if (i==2)
+          actionMoins(); //On effection les actions pour le bouton moins
+        if (i==3)
+          actionPlus(); //On effection les actions pour le bouton Plus
+      }
+      ul_Sleep=ul_Temps;
+      sleep=0;
+      lcd.clear();
+      if (sonne)
+      {
+        sonne=0;
+        digitalWrite(pinRelais, LOW);
+      }
+   }
+   else if (digitalRead(MesBoutons[i].pin)==HIGH&&MesBoutons[i].actif==1) //Sinon, si le bouton a été appuyé mais qu'il ne l'est plus
+   {
+      MesBoutons[i].actif=0; //On le fait repasser à 0
+   }
+ }
 }
 
 void affichageEtat1() //Le principe va être le même pour les deux sous programmes suivant : On fait clignoter le paramètre pointé par SWITCH soit l'heure, les minutes, les secondes ou on/off et si on appuie sur switch, et bien on change
@@ -423,7 +433,6 @@ void sleepState() //Pour mettre en place le mode
   if (sleep)
   {
     lcd.noBacklight();  //On coupe le rétroéclairage
-    lcd.clear();
   }
   else
     lcd.backlight(); //On rallume l'éclairage

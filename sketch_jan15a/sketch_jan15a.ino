@@ -37,7 +37,7 @@ typedef struct bouton{
 };
 
 bouton MesBoutons[4]; //Tableau de boutons (4 - Settings, Switch, -, +)
-
+// Bla bla
   
 typedef struct reveil{
   int heures=0; //Compteur des heures du réveil

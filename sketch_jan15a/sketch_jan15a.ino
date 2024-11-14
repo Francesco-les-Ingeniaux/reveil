@@ -8,6 +8,7 @@
 
 //N correspond au nombre d'écrans différents
 #define N NbR+1
+// hahaha
 
 
 DS3231 Clock; //Objet de type DS3231 (RTC)
